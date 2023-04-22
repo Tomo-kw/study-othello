@@ -1,7 +1,10 @@
 // 盤面の縦横数
-const BOARD_SIZE = 8;
+const BOARD_LENGTH = 8;
+// 確認用
+// const BOARD_LENGTH = 4;
 // 打ち手の状態：初期値は黒が先手
 let isBlackTurn = true;
+
 window.onload = () => {
     gameStart()
 };
@@ -18,15 +21,14 @@ const gameStart = () => {
 const createBoard = () => {
     const board = [];
 
-    for (let y = 0; y < BOARD_SIZE; y++) {
+    for (let y = 0; y < BOARD_LENGTH; y++) {
         const row = [];
-        for (let x = 0; x < BOARD_SIZE; x++) {
+
+        for (let x = 0; x < BOARD_LENGTH; x++) {
             row.push({
                 x,
                 y,
-                isStone: false,
-                isBlack: false,
-                isWhite: false,
+                stoneStatus: null,
                 element: null,
             })
         }
@@ -36,34 +38,38 @@ const createBoard = () => {
     return board;
 }
 
-// 石の初期値を設定する
+// 石の初期値を設定する,冗長
 const setInitialBoard = (board) => {
     // 画面中央に黒2 * 白2石の石セット
-    // 黒
-    board[3][4].isBlack = true;
-    board[3][4].isStone = true;
-    board[4][3].isBlack = true;
-    board[4][3].isStone = true;
-    // 白
-    board[3][3].isWhite = true;
-    board[3][3].isStone = true;
-    board[4][4].isWhite = true;
-    board[4][4].isStone = true;
+    board[3][4].stoneStatus = 'black';
+    board[4][3].stoneStatus = 'black';
+    board[3][3].stoneStatus = 'white';
+    board[4][4].stoneStatus = 'white';
+
+    // 4*4用
+    // board[1][2].stoneStatus = 'black';
+    // board[2][1].stoneStatus = 'black';
+    // board[1][1].stoneStatus = 'white';
+    // board[2][2].stoneStatus = 'white';
 }
 
 // 盤面をHTMLで生成
 const createBoardHtml = (board) => {
     const tableElement = document.getElementById('table');
 
-    for (let y = 0; y < BOARD_SIZE; y++) {
+    for (let y = 0; y < BOARD_LENGTH; y++) {
         const trElement = document.createElement('tr');
 
-        for (let x = 0; x < BOARD_SIZE; x++) {
+        for (let x = 0; x < BOARD_LENGTH; x++) {
             let tdElement = document.createElement('td');
+
+            setCellContent(tdElement, board, x, y);
+            setClickEvent(tdElement, board, x, y);
+
             board[y][x].element = tdElement
-            trElement.appendChild(setCellContent(x, y, tdElement, board));
-            trElement.appendChild(setClickEvent(x, y, tdElement, board));
+            trElement.appendChild(tdElement);
         }
+
         tableElement.appendChild(trElement);
     }
 }
@@ -75,63 +81,59 @@ const displayPlayer = (isBlackTurn) => {
 }
 
 // 石の初期値状態をセット
-const setCellContent = (x, y, tdElement, board) => {
-    if (!board[y][x].isStone) {
+const setCellContent = (tdElement, board, x, y) => {
+    if (board[y][x].stoneStatus === null) {
         tdElement.innerText = null;
-    } else if (board[y][x].isBlack) {
+    } else if (board[y][x].stoneStatus === 'black') {
         tdElement.innerText = '●';
     } else {
         tdElement.innerText = '🔘';
     }
-
-    return tdElement;
 }
 
-const setClickEvent  = (x, y, tdElement, board) => {
+const setClickEvent  = (tdElement, board, x, y) => {
     tdElement.onclick = () => {
         // 石を置けるかどうかのチェック
-        if (!canPlaceStone(x, y, board, isBlackTurn)) {
+        if (!canPlaceStone(board, isBlackTurn, x, y)) {
             return;
         }
 
-        changeStoneColor(x, y, board, isBlackTurn);
+        changeStoneColor(board, isBlackTurn, x, y);
         // 全てのセルが埋まっている場合ゲーム終了
         if (isBoardFull(board)) {
             gameEnd(board);
             return;
         }
-        // 打ち手の交代
-        isBlackTurn = !isBlackTurn;
         // 打つ場所があるか？ない場合はプレイヤー切り替え
-        if (!checkNextPlayerCanPlaceStone(board, isBlackTurn)) {
-            alert(isBlackTurn ? '黒は打てないため白のターンになります' : '白は打てないため黒のターンになります');
+        if (!checkNextPlayerCanPlaceStone(board, !isBlackTurn)) {
+            alert(!isBlackTurn ? '黒は打てないため白のターンになります' : '白は打てないため黒のターンになります');
+        } else {
             isBlackTurn = !isBlackTurn;
         }
 
         displayPlayer(isBlackTurn)
     }
-
-    return tdElement;
 }
 
 // クリックした箇所に石がおけるかどうか
-const canPlaceStone = (x, y, board, turnIsBlack) => {
+const canPlaceStone = (board, turnIsBlack, x, y) => {
     // 既に石が置いてある場合は置けない
-    if (board[y][x].isStone) {
+    if (board[y][x].stoneStatus) {
         return false;
     }
-    const myColor = turnIsBlack ? 'isBlack' : 'isWhite';
-    const opponentColor = turnIsBlack ? 'isWhite' : 'isBlack';
+
+    const myColor = turnIsBlack ? 'black' : 'white';
+    const opponentColor = turnIsBlack ? 'white' : 'black';
 
     const adjacentCellXY = [-1, 0, 1];
 
     for (let i = 0; i < adjacentCellXY.length; i++) {
         for (let j = 0; j < adjacentCellXY.length; j++) {
-            const y2  = adjacentCellXY[i];
-            const x2  = adjacentCellXY[j];
+            const dy  = adjacentCellXY[i]
+            const dx  = adjacentCellXY[j]
 
             // 自身のセルは何もしない
-            if (y2 === 0 && x2 === 0) {
+            if (dy === 0 && dx === 0) {
                 continue;
             }
 
@@ -139,26 +141,26 @@ const canPlaceStone = (x, y, board, turnIsBlack) => {
             let hasOpponentStone = false;
 
             // チェックするセルの座標
-            let y3 = y + y2;
-            let x3 = x + x2;
+            let y2 = y + dy;
+            let x2 = x + dx;
 
             // 配列のインデックスの範囲を超えるまでループ処理
-            while(y3 >= 0 && y3 < BOARD_SIZE && x3 >= 0 && x3 < BOARD_SIZE) {
-                if (board[y3][x3].isStone) {
-                    if (board[y3][x3][opponentColor]) {
-                        hasOpponentStone = true;
-                    } else if (board[y3][x3][myColor]) {
-                        if (hasOpponentStone) {
-                            return true;
-                        }
-                        break;
-                    }
+            while(y2 >= 0 && y2 < BOARD_LENGTH && x2 >= 0 && x2 < BOARD_LENGTH) {
+                // 石がない場合
+                if (!board[y2][x2].stoneStatus) {
+                    break;
+                }
+                // 石の色を確認
+                if (board[y2][x2].stoneStatus === opponentColor) {
+                    hasOpponentStone = true;
+                } else if (board[y2][x2].stoneStatus === myColor && hasOpponentStone) {
+                    return true;
                 } else {
                     break;
                 }
 
-                y3 += y2;
-                x3 += x2;
+                y2 += dy;
+                x2 += dx;
             }
         }
     }
@@ -166,19 +168,19 @@ const canPlaceStone = (x, y, board, turnIsBlack) => {
 }
 
 // 石の色を変更する処理
-const changeStoneColor = (x, y, board, turnIsBlack) => {
-    const myColor = turnIsBlack ? 'isBlack' : 'isWhite';
-    const opponentColor = turnIsBlack ? 'isWhite' : 'isBlack';
+const changeStoneColor = (board, turnIsBlack, x, y) => {
+    const myColor = turnIsBlack ? 'black' : 'white';
+    const opponentColor = turnIsBlack ? 'white' : 'black';
 
     let adjacentCellXY = [-1, 0, 1];
 
     for (let i = 0; i < adjacentCellXY.length; i++) {
         for (let j = 0; j < adjacentCellXY.length; j++) {
-            const y2  = adjacentCellXY[i]
-            const x2  = adjacentCellXY[j]
+            const dy  = adjacentCellXY[i]
+            const dx  = adjacentCellXY[j]
 
             // 自身のセルは何もしない
-            if (y2 === 0 && x2 === 0) {
+            if (dy === 0 && dx === 0) {
                 continue;
             }
 
@@ -186,70 +188,65 @@ const changeStoneColor = (x, y, board, turnIsBlack) => {
             let hasOpponentStone = false;
 
             // チェックするセルの座標
-            let y3 = y + y2;
-            let x3 = x + x2;
+            let y2 = y + dy;
+            let x2 = x + dx;
 
-            // インデック内ループ
-            while(y3 >= 0 && y3 < BOARD_SIZE && x3 >= 0 && x3 < BOARD_SIZE) {
-                if (board[y3][x3].isStone) {
-                    if (board[y3][x3][opponentColor]) {
-                        hasOpponentStone = true;
-                    } else if (board[y3][x3][myColor]) {
-                        if (hasOpponentStone) {
-                            let y4 = y + y2;
-                            let x4 = x + x2;
+            // 配列のインデックスの範囲を超えるまでループ処理
+            while(y2 >= 0 && y2 < BOARD_LENGTH && x2 >= 0 && x2 < BOARD_LENGTH) {
+                // 石がない場合
+                if (!board[y2][x2].stoneStatus) {
+                    break;
+                }
+                // 石の色を確認
+                if (board[y2][x2].stoneStatus === opponentColor) {
+                    hasOpponentStone = true;
+                } else if (board[y2][x2].stoneStatus === myColor && hasOpponentStone) {
+                    let y3 = y + dy;
+                    let x3 = x + dx;
 
-                            while (y4 !== y3 || x4 !== x3) {
-                                board[y4][x4][myColor] = true;
-                                board[y4][x4][opponentColor] = false;
-                                board[y4][x4].element.innerText = turnIsBlack ? '●' : '🔘';
+                    while (y3 !== y2 || x3 !== x2) {
+                        board[y3][x3].stoneStatus = myColor;
+                        board[y3][x3].element.innerText = turnIsBlack ? '●' : '🔘';
 
-                                y4 += y2;
-                                x4 += x2;
-                            }
-                        }
-                        break;
+                        y3 += dy;
+                        x3 += dx;
                     }
                 } else {
                     break;
                 }
 
-                y3 += y2;
-                x3 += x2;
+                y2 += dy;
+                x2 += dx;
             }
         }
     }
 
     // 置いた石の状態を変更する
-    board[y][x][myColor] = true
-    board[y][x][opponentColor] = false
-    board[y][x].isStone = true;
+    board[y][x].stoneStatus = myColor;
     board[y][x].element.innerText = turnIsBlack ? '●' : '🔘';
 }
 
 // プレイヤーが切り替わった際に盤面に石を置く場所があるか
 const checkNextPlayerCanPlaceStone = (board, isBlackTurn) => {
     // 配列内のいずれかの要素が条件に合致しているかを判定
-    return board.some((row) => row.some((cell) => !cell.isStone &&
-        canPlaceStone(cell.x , cell.y, board, isBlackTurn)))
+    return board.some((row) => row.some((cell) => !cell.stoneStatus &&
+        canPlaceStone(board, isBlackTurn, cell.x , cell.y)))
 }
 
 // 全てのセルが埋まっているかどうかのチェック
 const isBoardFull = (board) => {
-    return !board.some((row) => row.some((cell) => !cell.isStone))
+    return !board.some((row) => row.some((cell) => !cell.stoneStatus))
 }
 
 const countStones = (board) => {
     let blackStones = 0;
     let whiteStones = 0;
 
-    for (let y = 0; y < BOARD_SIZE; y++) {
-        for (let x = 0; x < BOARD_SIZE; x++) {
-            if (board[y][x].isBlack) {
+    for (let y = 0; y < BOARD_LENGTH; y++) {
+        for (let x = 0; x < BOARD_LENGTH; x++) {
+            if (board[y][x].stoneStatus === 'black') {
                 blackStones++;
-                continue;
-            }
-            if (board[y][x].isWhite) {
+            } else if (board[y][x].stoneStatus === 'white') {
                 whiteStones++;
             }
         }
