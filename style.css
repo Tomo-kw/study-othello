@@ -1,0 +1,60 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    width: 1000px;
+    justify-content: center;
+    align-items: center;
+}
+table {
+    /*background-color: #000;*/
+    background-color: darkcyan;
+    border: 2px solid #000;
+    border-collapse: collapse;
+    cursor: pointer;
+}
+td {
+    border: 1px solid #000;
+    width: 50px;
+    height: 50px;
+    font-size: 30px;
+    text-align: center;
+}
+td:hover {
+    opacity: 0.8;
+    background-color: #fff;
+}
+
+.player {
+    display: flex;
+    gap: 20px;
+    font-weight: bold;
+    font-size: 30px;
+    padding: 25px;
+}
+.buttonArea {
+    margin-bottom: 25px;
+}
+.resetButton {
+    background-color: lightgrey;
+    border-radius: 3px;
+    padding: 6px 20px;
+    cursor: pointer;
+}
+.resetButton:hover {
+    opacity: 0.7;
+}
+
+.resultContent {
+    font-weight: bold;
+}
+
+#result {
+    font-size: 20px;
+    margin-bottom: 15px;
+}
+
+#winner {
+    font-size: 30px;
+    color: red;
+    font-weight: bold;
+}
